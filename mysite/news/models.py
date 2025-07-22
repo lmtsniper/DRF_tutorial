@@ -1,21 +1,13 @@
 from django.db import models
 
+from django.contrib.auth.models import User
+
 # Create your models here.
-class Category(models.Model):
-    LAYOUT_CHOICE = (
-        ('list', 'List'),
-        ('grid', 'Grid')
-    )
-    STATUS_CHOICE = (
-        ('draft', 'Draft'),
-        ('published', 'Published')
-    )
-    name = models.CharField(unique=True, max_length=100)
-    slug = models.SlugField(unique=True, max_length=100)
-    is_homepage = models.BooleanField(default=False)
-    layout = models.CharField(max_length=10, choices=LAYOUT_CHOICE, default="list")
-    status = models.CharField(max_length=10, choices=STATUS_CHOICE, default="draft")
-    ordering = models.IntegerField(default=0)
+class Article(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='articles')
 
     def __str__(self):
-        return self.name
+        return self.title
