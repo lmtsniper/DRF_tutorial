@@ -5,6 +5,9 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.http import HttpResponse
 
 from .models import Article
 from .serializers import ArticleSerializer, RegisterSerializer
@@ -14,11 +17,27 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
 
+def verify_email(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except Exception:
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        return HttpResponse("Tài khoản đã được xác thực thành công!")
+    else:
+        return HttpResponse("Liên kết xác thực không hợp lệ hoặc đã hết hạn.")
+
 # Đăng nhập
 class CustomLoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         token = Token.objects.get(key=response.data['token'])
+        if not token.user.is_active:
+            return Response({'error': 'Tài khoản chưa được xác thực qua email.'}, status=403)
         return Response({'token': token.key, 'username': token.user.username})
 
 # Đăng xuất
