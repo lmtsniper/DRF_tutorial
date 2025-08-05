@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Article
+from .models import Article, Comment, Reaction
 
 # User Register
 class RegisterSerializer(serializers.ModelSerializer):
@@ -47,4 +47,22 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Article
-        fields = ['id', 'title', 'content', 'created_at', 'author']
+        fields = ['id', 'author', 'title', 'content', 'created_at']
+
+# Comment
+class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'article', 'user', 'content', 'created_at']
+        read_only_fields = ['user', 'created_at']
+
+# Reaction
+class ReactionSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Reaction
+        fields = ['id', 'article', 'user', 'type', 'created_at']
+        read_only_fields = ['user', 'created_at']

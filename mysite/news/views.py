@@ -9,8 +9,8 @@ from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from django.http import HttpResponse
 
-from .models import Article
-from .serializers import ArticleSerializer, RegisterSerializer
+from .models import Article, Comment, Reaction
+from .serializers import ArticleSerializer, RegisterSerializer, CommentSerializer, ReactionSerializer
 
 # Đăng ký
 class RegisterView(generics.CreateAPIView):
@@ -32,21 +32,21 @@ def verify_email(request, uidb64, token):
         return HttpResponse("Liên kết xác thực không hợp lệ hoặc đã hết hạn.")
 
 # Đăng nhập
-class CustomLoginView(ObtainAuthToken):
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        token = Token.objects.get(key=response.data['token'])
-        if not token.user.is_active:
-            return Response({'error': 'Tài khoản chưa được xác thực qua email.'}, status=403)
-        return Response({'token': token.key, 'username': token.user.username})
+# class CustomLoginView(ObtainAuthToken):
+#     def post(self, request, *args, **kwargs):
+#         response = super().post(request, *args, **kwargs)
+#         token = Token.objects.get(key=response.data['token'])
+#         if not token.user.is_active:
+#             return Response({'error': 'Tài khoản chưa được xác thực qua email.'}, status=403)
+#         return Response({'token': token.key, 'username': token.user.username})
 
 # Đăng xuất
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+# class LogoutView(APIView):
+#     permission_classes = [IsAuthenticated]
     
-    def post(self, request):
-        request.user.auth_token.delete()
-        return Response({"message": "Logged out successfully"})
+#     def post(self, request):
+#         request.user.auth_token.delete()
+#         return Response({"message": "Logged out successfully"})
 
 # CRUD bài viết
 class ArticleViewSet(viewsets.ModelViewSet):
@@ -58,3 +58,25 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class ReactionViewSet(viewsets.ModelViewSet):
+    queryset = Reaction.objects.all()
+    serializer_class = ReactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Nếu đã tồn tại thì cập nhật
+        obj, created = Reaction.objects.update_or_create(
+            article=serializer.validated_data['article'],
+            user=self.request.user,
+            defaults={'type': serializer.validated_data['type']}
+        )
+        return obj
